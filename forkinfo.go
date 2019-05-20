@@ -14,20 +14,18 @@ var (
     client = github.NewClient(nil)
 )
 
-func fetchRepository(username, repository string) (*github.Repository) {
-    data, _, err := client.Repositories.Get(context.Background(), username, repository)
+func fetchRepository(username, repository string) (repo *github.Repository) {
+    repo, _, err := client.Repositories.Get(context.Background(), username, repository)
     abortOnError(err)
-
-    return data
+    return
 }
 
-func fetchRepositoryForks(username, repository string) ([]*github.Repository) {
+func fetchRepositoryForks(username, repository string) (forks []*github.Repository) {
     opts := github.RepositoryListForksOptions{}
 
     forks, _, err := client.Repositories.ListForks(context.Background(), username, repository, &opts)
     abortOnError(err)
-
-    return forks
+    return
 }
 
 func printRepoStats(repo *github.Repository) {
