@@ -10,22 +10,33 @@ import (
     "github.com/google/go-github/github"
 )
 
+var (
+    client = github.NewClient(nil)
+)
+
 func fetchRepository(username, repository string) (*github.Repository, error) {
-    client := github.NewClient(nil)
     data, _, err := client.Repositories.Get(context.Background(), username, repository)
 
     return data, err
 }
 
+func fetchRepositoryForks(username, repository string) ([]*github.Repository, error) {
+    opts := github.RepositoryListForksOptions{}
+
+    forks, _, err := client.Repositories.ListForks(context.Background(), username, repository, &opts)
+
+    return forks, err
+}
+
 func printRepoStats(repo *github.Repository) {
     fmt.Printf(
         "Watchers: %d\tStargazers: %d\tForks: %d\n\n",
-        *repo.SubscribersCount,
-        *repo.StargazersCount,
-        *repo.ForksCount,
+        repo.GetSubscribersCount(),
+        repo.GetStargazersCount(),
+        repo.GetForksCount(),
     )
     fmt.Println("Most recent push: " + repo.PushedAt.Format(time.RFC1123))
-    fmt.Printf("This repository has %d open issues and PRs\n", *repo.OpenIssuesCount)
+    fmt.Printf("This repository has %d open issues and PRs\n\n", *repo.OpenIssuesCount)
 }
 
 func main() {
@@ -51,6 +62,24 @@ func main() {
 
     fmt.Printf("\n%s: %s\n - %s\n\n", *repo.Name, *repo.Description, *repo.HTMLURL)
     printRepoStats(repo)
+
+    if repo.GetForksCount() == 0 {
+        return
+    }
+
+    fmt.Printf("Listing forks of %s...\n", *repo.FullName)
+    forks, err := fetchRepositoryForks(username, repository)
+    if (err != nil) {
+        fmt.Printf("[ERROR] %v\n", err)
+        os.Exit(1)
+    }
+
+    for _, fork := range forks {
+        fmt.Println()
+        fmt.Println(*fork.FullName)
+        printRepoStats(fork)
+        fmt.Println("---")
+    }
 }
 
 func abort(msg string) {
