@@ -5,6 +5,7 @@ import (
     "fmt"
     "time"
     "os"
+    "strconv"
     "strings"
 
     "github.com/google/go-github/github"
@@ -50,6 +51,10 @@ func printRepoStats(repo *github.Repository, format string) {
     )
 }
 
+func rowNum(row, total int) string {
+    return fmt.Sprintf("[%*d/%d]", len(strconv.Itoa(total)), row, total)
+}
+
 func main() {
     if len(os.Args[1:]) == 0 {
         abort("Not enough arguments supplied.")
@@ -74,11 +79,12 @@ func main() {
         return
     }
 
-    fmt.Printf("Listing forks of %s...\n", *repo.FullName)
+    fmt.Printf("Listing forks of %s...\n\n", *repo.FullName)
     forks := fetchRepositoryForks(username, repository)
+    numForks := len(forks)
 
-    for _, fork := range forks {
-        fmt.Println(*fork.FullName)
+    for i, fork := range forks {
+        fmt.Printf("%s %s\n", rowNum(i+1, numForks), *fork.FullName)
         printRepoStats(fork, "short")
     }
 }
