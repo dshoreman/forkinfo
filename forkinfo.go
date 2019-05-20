@@ -8,8 +8,11 @@ import (
     "strconv"
     "strings"
 
+    flag "github.com/ogier/pflag"
     "github.com/google/go-github/github"
 )
+
+const version = "0.1.0"
 
 var (
     client = github.NewClient(nil)
@@ -87,6 +90,17 @@ func main() {
     for i, fork := range forks {
         fmt.Printf("%s %s\n", rowNum(i+1, numForks), *fork.FullName)
         printRepoStats(fork, "short")
+    }
+}
+
+func init() {
+    var showVersionInfo bool
+    flag.BoolVarP(&showVersionInfo, "version", "V", false, "Print version info and quit.")
+    flag.Parse()
+
+    if showVersionInfo {
+        fmt.Println("Forkinfo " + version)
+        os.Exit(0)
     }
 }
 
