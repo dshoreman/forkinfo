@@ -28,15 +28,26 @@ func fetchRepositoryForks(username, repository string) (forks []*github.Reposito
     return
 }
 
-func printRepoStats(repo *github.Repository) {
+func printRepoStats(repo *github.Repository, format string) {
+    var datefmt string
+    output := "Watchers: %d\tStars: %d\tForks: %d"
+
+    if format == "short" {
+        datefmt = "02/01/2006 15:04:05"
+        output += "\tIssues/PRs: %d\tLast push: %s\n\n"
+    } else {
+        datefmt = string(time.RFC1123)
+        output += "\n\nThis repository has %d open issues and PRs\nMost recent push: %s\n\n"
+    }
+
     fmt.Printf(
-        "Watchers: %d\tStargazers: %d\tForks: %d\n\n",
+        output,
         repo.GetSubscribersCount(),
         repo.GetStargazersCount(),
         repo.GetForksCount(),
+        repo.GetOpenIssuesCount(),
+        repo.PushedAt.Format(datefmt),
     )
-    fmt.Println("Most recent push: " + repo.PushedAt.Format(time.RFC1123))
-    fmt.Printf("This repository has %d open issues and PRs\n\n", *repo.OpenIssuesCount)
 }
 
 func main() {
@@ -57,7 +68,7 @@ func main() {
     repo := fetchRepository(username, repository)
 
     fmt.Printf("\n%s: %s\n - %s\n\n", *repo.Name, *repo.Description, *repo.HTMLURL)
-    printRepoStats(repo)
+    printRepoStats(repo, "long")
 
     if repo.GetForksCount() == 0 {
         return
@@ -67,10 +78,8 @@ func main() {
     forks := fetchRepositoryForks(username, repository)
 
     for _, fork := range forks {
-        fmt.Println()
         fmt.Println(*fork.FullName)
-        printRepoStats(fork)
-        fmt.Println("---")
+        printRepoStats(fork, "short")
     }
 }
 
