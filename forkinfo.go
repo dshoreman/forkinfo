@@ -14,18 +14,20 @@ var (
     client = github.NewClient(nil)
 )
 
-func fetchRepository(username, repository string) (*github.Repository, error) {
+func fetchRepository(username, repository string) (*github.Repository) {
     data, _, err := client.Repositories.Get(context.Background(), username, repository)
+    abortOnError(err)
 
-    return data, err
+    return data
 }
 
-func fetchRepositoryForks(username, repository string) ([]*github.Repository, error) {
+func fetchRepositoryForks(username, repository string) ([]*github.Repository) {
     opts := github.RepositoryListForksOptions{}
 
     forks, _, err := client.Repositories.ListForks(context.Background(), username, repository, &opts)
+    abortOnError(err)
 
-    return forks, err
+    return forks
 }
 
 func printRepoStats(repo *github.Repository) {
@@ -54,11 +56,7 @@ func main() {
     username, repository := args[0], args[1]
 
     fmt.Println("Fetching repository...")
-    repo, err := fetchRepository(username, repository)
-    if (err != nil) {
-        fmt.Printf("[ERROR] %v\n", err)
-        os.Exit(1)
-    }
+    repo := fetchRepository(username, repository)
 
     fmt.Printf("\n%s: %s\n - %s\n\n", *repo.Name, *repo.Description, *repo.HTMLURL)
     printRepoStats(repo)
@@ -68,11 +66,7 @@ func main() {
     }
 
     fmt.Printf("Listing forks of %s...\n", *repo.FullName)
-    forks, err := fetchRepositoryForks(username, repository)
-    if (err != nil) {
-        fmt.Printf("[ERROR] %v\n", err)
-        os.Exit(1)
-    }
+    forks := fetchRepositoryForks(username, repository)
 
     for _, fork := range forks {
         fmt.Println()
@@ -87,4 +81,11 @@ func abort(msg string) {
     fmt.Println()
     fmt.Println("Usage: " + os.Args[0] + " <user>/<repository>")
     os.Exit(1)
+}
+
+func abortOnError(err error) {
+    if (err != nil) {
+        fmt.Printf("[ERROR] %v\n", err)
+        os.Exit(1)
+    }
 }
