@@ -21,10 +21,11 @@ func fetchRepository(username, repository string) (repo *github.Repository) {
     return
 }
 
-func fetchRepositoryForks(username, repository string) (forks []*github.Repository) {
-    opts := github.RepositoryListForksOptions{}
-
-    forks, _, err := client.Repositories.ListForks(context.Background(), username, repository, &opts)
+func fetchRepositoryForks(repo *github.Repository) (forks []*github.Repository) {
+    opts := github.RepositoryListForksOptions{
+        ListOptions: github.ListOptions{PerPage: repo.GetForksCount()},
+    }
+    forks, _, err := client.Repositories.ListForks(context.Background(), *repo.Owner.Login, *repo.Name, &opts)
     abortOnError(err)
     return
 }
@@ -80,7 +81,7 @@ func main() {
     }
 
     fmt.Printf("Listing forks of %s...\n\n", *repo.FullName)
-    forks := fetchRepositoryForks(username, repository)
+    forks := fetchRepositoryForks(repo)
     numForks := len(forks)
 
     for i, fork := range forks {
