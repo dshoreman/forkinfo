@@ -16,10 +16,11 @@ const version = "0.1.0"
 
 var (
     client = github.NewClient(nil)
+    ctx = context.Background()
 )
 
 func fetchRepository(username, repository string) (repo *github.Repository) {
-    repo, _, err := client.Repositories.Get(context.Background(), username, repository)
+    repo, _, err := client.Repositories.Get(ctx, username, repository)
     abortOnError(err)
     return
 }
@@ -28,7 +29,7 @@ func fetchRepositoryForks(repo *github.Repository) (forks []*github.Repository) 
     opts := github.RepositoryListForksOptions{
         ListOptions: github.ListOptions{PerPage: repo.GetForksCount()},
     }
-    forks, _, err := client.Repositories.ListForks(context.Background(), *repo.Owner.Login, *repo.Name, &opts)
+    forks, _, err := client.Repositories.ListForks(ctx, *repo.Owner.Login, *repo.Name, &opts)
     abortOnError(err)
     return
 }
