@@ -32,14 +32,17 @@ var (
 )
 
 func loadConfig() {
-    data, err := ioutil.ReadFile(strings.Join([] string {
+    file := strings.Join([] string {
         os.Getenv("HOME"),
         configPath,
         configFile,
-    }, "/"))
-    abortOnError(err)
+    }, "/")
 
-    json.Unmarshal(data, &config)
+    if data, err := ioutil.ReadFile(file); err == nil {
+        json.Unmarshal(data, &config)
+    } else if !os.IsNotExist(err) {
+        abortOnError(err)
+    }
 }
 
 func setupAPI() {
