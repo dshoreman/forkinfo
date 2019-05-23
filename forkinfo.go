@@ -6,6 +6,7 @@ import (
     "encoding/json"
     "fmt"
     "io/ioutil"
+    "net/http"
     "time"
     "os"
     "strconv"
@@ -25,6 +26,7 @@ type Config struct {
 }
 
 var (
+    authClient *http.Client
     client *github.Client
     config Config
     ctx = context.Background()
@@ -49,24 +51,28 @@ func setupAPI() {
     if token = config.AccessToken; token == "" {
         promptForToken()
     }
-
-    token := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-    client = github.NewClient(oauth2.NewClient(ctx, token))
+    if token == "" {
+        fmt.Println("Continuing without authentication")
+    } else {
+        authClient = oauth2.NewClient(ctx, oauth2.StaticTokenSource(
+            &oauth2.Token{AccessToken: token},
+        ))
+    }
+    client = github.NewClient(authClient)
 }
 
 func promptForToken() {
-    reader := bufio.NewReader(os.Stdin)
     fmt.Println("The Github API limits Unauthenticated access to 60 requests per")
     fmt.Println("hour. To raise these limits, create a Personal Access Token at")
     fmt.Println("https://github.com/settings/tokens/new?description=Forkinfo.")
     fmt.Println("Leaves scopes unchecked - Forkinfo requires no special access.")
     fmt.Println()
+    fmt.Println("To continue unauthenticated, press Enter. To use your newly")
+    fmt.Println("newly created Personal Access Token, first paste it below:")
 
-    for prompt := true; prompt; prompt = token == "" {
-        fmt.Println("Paste your API key below:")
-        token, _ = reader.ReadString('\n')
-        token = strings.Trim(token, " \n\r\t")
-    }
+    reader := bufio.NewReader(os.Stdin)
+    token, _ = reader.ReadString('\n')
+    token = strings.Trim(token, " \n\r\t")
 }
 
 func fetchRepository(username, repository string) (repo *github.Repository) {
