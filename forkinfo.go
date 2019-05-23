@@ -29,33 +29,49 @@ var (
     authClient *http.Client
     client *github.Client
     config Config
+    configLoaded = false
     ctx = context.Background()
-    token string
 )
 
-func loadConfig() {
-    file := strings.Join([] string {
+func configFullPath() string {
+    return strings.Join([] string {
         os.Getenv("HOME"),
         configPath,
         configFile,
     }, "/")
+}
 
-    if data, err := ioutil.ReadFile(file); err == nil {
+func loadConfig() {
+    if data, err := ioutil.ReadFile(configFullPath()); err == nil {
         json.Unmarshal(data, &config)
+        configLoaded = true
     } else if !os.IsNotExist(err) {
         abortOnError(err)
     }
 }
 
-func setupAPI() {
-    if token = config.AccessToken; token == "" {
-        promptForToken()
+func writeConfig() {
+    fmt.Println("Saving config to ", configFullPath(), "...")
+    configString, _ := json.MarshalIndent(config, "", "  ")
+
+    os.MkdirAll(strings.Join([] string {os.Getenv("HOME"), configPath}, "/"), 0700)
+
+    if err := ioutil.WriteFile(configFullPath(), append(configString, '\n'), 0644); err != nil {
+        fmt.Println("Failed saving config")
+        fmt.Println(err)
     }
-    if token == "" {
+    loadConfig()
+}
+
+func setupAPI() {
+    if config.AccessToken == "" {
         fmt.Println("Continuing without authentication")
     } else {
+        if !configLoaded {
+            writeConfig()
+        }
         authClient = oauth2.NewClient(ctx, oauth2.StaticTokenSource(
-            &oauth2.Token{AccessToken: token},
+            &oauth2.Token{AccessToken: config.AccessToken},
         ))
     }
     client = github.NewClient(authClient)
@@ -71,8 +87,8 @@ func promptForToken() {
     fmt.Println("newly created Personal Access Token, first paste it below:")
 
     reader := bufio.NewReader(os.Stdin)
-    token, _ = reader.ReadString('\n')
-    token = strings.Trim(token, " \n\r\t")
+    token, _ := reader.ReadString('\n')
+    config.AccessToken = strings.Trim(token, " \n\r\t")
 }
 
 func fetchRepository(username, repository string) (repo *github.Repository) {
@@ -130,6 +146,9 @@ func main() {
     args := strings.Split(os.Args[1], "/")
     username, repository := args[0], args[1]
 
+    if config.AccessToken == "" {
+        promptForToken()
+    }
     setupAPI()
 
     fmt.Println("Fetching repository...")
