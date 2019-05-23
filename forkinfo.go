@@ -56,9 +56,14 @@ func setupAPI() {
 
 func promptForToken() {
     reader := bufio.NewReader(os.Stdin)
+    fmt.Println("The Github API limits Unauthenticated access to 60 requests per")
+    fmt.Println("hour. To raise these limits, create a Personal Access Token at")
+    fmt.Println("https://github.com/settings/tokens/new?description=Forkinfo.")
+    fmt.Println("Leaves scopes unchecked - Forkinfo requires no special access.")
+    fmt.Println()
 
     for prompt := true; prompt; prompt = token == "" {
-        fmt.Println("Paste your API key to authenticate:")
+        fmt.Println("Paste your API key below:")
         token, _ = reader.ReadString('\n')
         token = strings.Trim(token, " \n\r\t")
     }
