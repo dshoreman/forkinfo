@@ -1,6 +1,7 @@
 package main
 
 import (
+    "bufio"
     "context"
     "fmt"
     "time"
@@ -10,14 +11,29 @@ import (
 
     flag "github.com/ogier/pflag"
     "github.com/google/go-github/github"
+    "golang.org/x/oauth2"
 )
 
 const version = "0.1.0"
 
 var (
-    client = github.NewClient(nil)
+    client *github.Client
     ctx = context.Background()
+    token string
 )
+
+func setupAPI() {
+    reader := bufio.NewReader(os.Stdin)
+
+    for prompt := true; prompt; prompt = token == "" {
+        fmt.Println("Paste your API key to authenticate:")
+        token, _ = reader.ReadString('\n')
+        token = strings.Trim(token, " \n\r\t")
+    }
+
+    token := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
+    client = github.NewClient(oauth2.NewClient(ctx, token))
+}
 
 func fetchRepository(username, repository string) (repo *github.Repository) {
     repo, _, err := client.Repositories.Get(ctx, username, repository)
@@ -73,6 +89,8 @@ func main() {
 
     args := strings.Split(os.Args[1], "/")
     username, repository := args[0], args[1]
+
+    setupAPI()
 
     fmt.Println("Fetching repository...")
     repo := fetchRepository(username, repository)
