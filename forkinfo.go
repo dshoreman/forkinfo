@@ -3,7 +3,9 @@ package main
 import (
     "bufio"
     "context"
+    "encoding/json"
     "fmt"
+    "io/ioutil"
     "time"
     "os"
     "strconv"
@@ -14,15 +16,42 @@ import (
     "golang.org/x/oauth2"
 )
 
+const configFile = "config.json"
+const configPath = ".config/forkinfo"
 const version = "0.1.0"
+
+type Config struct {
+    AccessToken string `json:"access_token"`
+}
 
 var (
     client *github.Client
+    config Config
     ctx = context.Background()
     token string
 )
 
+func loadConfig() {
+    data, err := ioutil.ReadFile(strings.Join([] string {
+        os.Getenv("HOME"),
+        configPath,
+        configFile,
+    }, "/"))
+    abortOnError(err)
+
+    json.Unmarshal(data, &config)
+}
+
 func setupAPI() {
+    if token = config.AccessToken; token == "" {
+        promptForToken()
+    }
+
+    token := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
+    client = github.NewClient(oauth2.NewClient(ctx, token))
+}
+
+func promptForToken() {
     reader := bufio.NewReader(os.Stdin)
 
     for prompt := true; prompt; prompt = token == "" {
@@ -30,9 +59,6 @@ func setupAPI() {
         token, _ = reader.ReadString('\n')
         token = strings.Trim(token, " \n\r\t")
     }
-
-    token := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-    client = github.NewClient(oauth2.NewClient(ctx, token))
 }
 
 func fetchRepository(username, repository string) (repo *github.Repository) {
@@ -121,6 +147,8 @@ func init() {
         fmt.Println("Forkinfo " + version)
         os.Exit(0)
     }
+
+    loadConfig()
 }
 
 func abort(msg string) {
