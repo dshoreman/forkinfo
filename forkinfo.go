@@ -31,6 +31,7 @@ var (
     config Config
     configLoaded = false
     ctx = context.Background()
+    skipAuth bool
 )
 
 func configFullPath() string {
@@ -64,12 +65,10 @@ func writeConfig() {
 }
 
 func setupAPI() {
-    if config.AccessToken == "" {
-        fmt.Println("Continuing without authentication")
-    } else {
-        if !configLoaded {
-            writeConfig()
-        }
+    if !skipAuth && !configLoaded {
+        writeConfig()
+    }
+    if !skipAuth {
         authClient = oauth2.NewClient(ctx, oauth2.StaticTokenSource(
             &oauth2.Token{AccessToken: config.AccessToken},
         ))
@@ -89,6 +88,10 @@ func promptForToken() {
     reader := bufio.NewReader(os.Stdin)
     token, _ := reader.ReadString('\n')
     config.AccessToken = strings.Trim(token, " \n\r\t")
+
+    if config.AccessToken == "" {
+        skipAuth = true
+    }
 }
 
 func fetchRepository(username, repository string) (repo *github.Repository) {
@@ -133,20 +136,20 @@ func rowNum(row, total int) string {
 }
 
 func main() {
-    if len(os.Args[1:]) == 0 {
+    if len(flag.Args()) == 0 {
         abort("Not enough arguments supplied.")
     }
-    if len(os.Args[1:]) > 1 {
+    if len(flag.Args()) > 1 {
         abort("Too many arguments supplied.")
     }
-    if ! strings.Contains(os.Args[1], "/") {
+    if ! strings.Contains(flag.Arg(0), "/") {
         abort("Argument is not a valid user/repo string.")
     }
 
-    args := strings.Split(os.Args[1], "/")
+    args := strings.Split(flag.Arg(0), "/")
     username, repository := args[0], args[1]
 
-    if config.AccessToken == "" {
+    if config.AccessToken == "" && !skipAuth  {
         promptForToken()
     }
     setupAPI()
@@ -173,12 +176,16 @@ func main() {
 
 func init() {
     var showVersionInfo bool
+    flag.BoolVarP(&skipAuth, "no-token", "T", false, "Use the Github API without authentication.")
     flag.BoolVarP(&showVersionInfo, "version", "V", false, "Print version info and quit.")
     flag.Parse()
 
     if showVersionInfo {
         fmt.Println("Forkinfo " + version)
         os.Exit(0)
+    }
+    if skipAuth {
+        fmt.Println("Running without authentication.")
     }
 
     loadConfig()
