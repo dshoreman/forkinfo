@@ -25,3 +25,8 @@ Forkinfo takes a single argument, and that's the `user/repo` string. For example
 ```
 $ forkinfo dshoreman/forkinfo
 ```
+
+When you run Forkinfo you will be prompted to enter a Personal Access Token to avoid hitting rate
+limits on the Github API. This is optional, but will be saved to a config file once you paste in your
+token and hit enter. To skip authentication, run Forkinfo with the `--no-token` flag. Note that "guest"
+API access is limited to 60 requests per hour, which may be too low for some repositories.

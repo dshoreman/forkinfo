@@ -81,16 +81,14 @@ func promptForToken() {
     fmt.Println("hour. To raise these limits, create a Personal Access Token at")
     fmt.Println("https://github.com/settings/tokens/new?description=Forkinfo.")
     fmt.Println("Leaves scopes unchecked - Forkinfo requires no special access.")
+    fmt.Println("To run without authentication, use forkinfo with `--no-token`.")
     fmt.Println()
-    fmt.Println("To continue unauthenticated, press Enter. To use your newly")
-    fmt.Println("newly created Personal Access Token, first paste it below:")
 
     reader := bufio.NewReader(os.Stdin)
-    token, _ := reader.ReadString('\n')
-    config.AccessToken = strings.Trim(token, " \n\r\t")
-
-    if config.AccessToken == "" {
-        skipAuth = true
+    for config.AccessToken == "" {
+        fmt.Println("Paste your personal access token:")
+        token, _ := reader.ReadString('\n')
+        config.AccessToken = strings.Trim(token, " \r\n\t")
     }
 }
 
