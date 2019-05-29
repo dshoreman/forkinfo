@@ -29,8 +29,8 @@ var (
     authClient *http.Client
     client *github.Client
     config Config
-    configLoaded = false
     ctx = context.Background()
+    saveConfig bool
     skipAuth bool
 )
 
@@ -45,7 +45,6 @@ func configFullPath() string {
 func loadConfig() {
     if data, err := ioutil.ReadFile(configFullPath()); err == nil {
         json.Unmarshal(data, &config)
-        configLoaded = true
     } else if !os.IsNotExist(err) {
         abortOnError(err)
     }
@@ -65,7 +64,7 @@ func writeConfig() {
 }
 
 func setupAPI() {
-    if !skipAuth && !configLoaded {
+    if saveConfig {
         writeConfig()
     }
     if !skipAuth {
@@ -149,6 +148,7 @@ func main() {
 
     if config.AccessToken == "" && !skipAuth  {
         promptForToken()
+        saveConfig = true
     }
     setupAPI()
 
@@ -173,20 +173,23 @@ func main() {
 }
 
 func init() {
-    var showVersionInfo bool
+    token := flag.StringP("token", "t", "", "Set the Personal Access Token for API authentication.")
     flag.BoolVarP(&skipAuth, "no-token", "T", false, "Use the Github API without authentication.")
-    flag.BoolVarP(&showVersionInfo, "version", "V", false, "Print version info and quit.")
+    showVersionInfo := flag.BoolP("version", "V", false, "Print version info and quit.")
     flag.Parse()
+    loadConfig()
 
-    if showVersionInfo {
+    if *showVersionInfo {
         fmt.Println("Forkinfo " + version)
         os.Exit(0)
     }
-    if skipAuth {
+    if skipAuth && *token != "" {
+        abort("Cannot skip authentication while also passing an access token.")
+    } else if *token != "" {
+        config.AccessToken = *token
+    } else if skipAuth {
         fmt.Println("Running without authentication.")
     }
-
-    loadConfig()
 }
 
 func abort(msg string) {
