@@ -1,8 +1,12 @@
 package main
 
 import (
+    "bufio"
     "context"
+    "encoding/json"
     "fmt"
+    "io/ioutil"
+    "net/http"
     "time"
     "os"
     "strconv"
@@ -10,16 +14,85 @@ import (
 
     flag "github.com/ogier/pflag"
     "github.com/google/go-github/github"
+    "golang.org/x/oauth2"
 )
 
+const configFile = "config.json"
+const configPath = ".config/forkinfo"
 const version = "0.1.0"
 
+type Config struct {
+    AccessToken string `json:"access_token"`
+}
+
 var (
-    client = github.NewClient(nil)
+    authClient *http.Client
+    client *github.Client
+    config Config
+    ctx = context.Background()
+    saveConfig bool
+    skipAuth bool
 )
 
+func configFullPath() string {
+    return strings.Join([] string {
+        os.Getenv("HOME"),
+        configPath,
+        configFile,
+    }, "/")
+}
+
+func loadConfig() {
+    if data, err := ioutil.ReadFile(configFullPath()); err == nil {
+        json.Unmarshal(data, &config)
+    } else if !os.IsNotExist(err) {
+        abortOnError(err)
+    }
+}
+
+func writeConfig() {
+    fmt.Println("Saving config to ", configFullPath(), "...")
+    configString, _ := json.MarshalIndent(config, "", "  ")
+
+    os.MkdirAll(strings.Join([] string {os.Getenv("HOME"), configPath}, "/"), 0700)
+
+    if err := ioutil.WriteFile(configFullPath(), append(configString, '\n'), 0644); err != nil {
+        fmt.Println("Failed saving config")
+        fmt.Println(err)
+    }
+    loadConfig()
+}
+
+func setupAPI() {
+    if saveConfig {
+        writeConfig()
+    }
+    if !skipAuth {
+        authClient = oauth2.NewClient(ctx, oauth2.StaticTokenSource(
+            &oauth2.Token{AccessToken: config.AccessToken},
+        ))
+    }
+    client = github.NewClient(authClient)
+}
+
+func promptForToken() {
+    fmt.Println("The Github API limits Unauthenticated access to 60 requests per")
+    fmt.Println("hour. To raise these limits, create a Personal Access Token at")
+    fmt.Println("https://github.com/settings/tokens/new?description=Forkinfo.")
+    fmt.Println("Leaves scopes unchecked - Forkinfo requires no special access.")
+    fmt.Println("To run without authentication, use forkinfo with `--no-token`.")
+    fmt.Println()
+
+    reader := bufio.NewReader(os.Stdin)
+    for config.AccessToken == "" {
+        fmt.Println("Paste your personal access token:")
+        token, _ := reader.ReadString('\n')
+        config.AccessToken = strings.Trim(token, " \r\n\t")
+    }
+}
+
 func fetchRepository(username, repository string) (repo *github.Repository) {
-    repo, _, err := client.Repositories.Get(context.Background(), username, repository)
+    repo, _, err := client.Repositories.Get(ctx, username, repository)
     abortOnError(err)
     return
 }
@@ -28,7 +101,7 @@ func fetchRepositoryForks(repo *github.Repository) (forks []*github.Repository) 
     opts := github.RepositoryListForksOptions{
         ListOptions: github.ListOptions{PerPage: repo.GetForksCount()},
     }
-    forks, _, err := client.Repositories.ListForks(context.Background(), *repo.Owner.Login, *repo.Name, &opts)
+    forks, _, err := client.Repositories.ListForks(ctx, *repo.Owner.Login, *repo.Name, &opts)
     abortOnError(err)
     return
 }
@@ -60,18 +133,24 @@ func rowNum(row, total int) string {
 }
 
 func main() {
-    if len(os.Args[1:]) == 0 {
+    if len(flag.Args()) == 0 {
         abort("Not enough arguments supplied.")
     }
-    if len(os.Args[1:]) > 1 {
+    if len(flag.Args()) > 1 {
         abort("Too many arguments supplied.")
     }
-    if ! strings.Contains(os.Args[1], "/") {
+    if ! strings.Contains(flag.Arg(0), "/") {
         abort("Argument is not a valid user/repo string.")
     }
 
-    args := strings.Split(os.Args[1], "/")
+    args := strings.Split(flag.Arg(0), "/")
     username, repository := args[0], args[1]
+
+    if config.AccessToken == "" && !skipAuth  {
+        promptForToken()
+        saveConfig = true
+    }
+    setupAPI()
 
     fmt.Println("Fetching repository...")
     repo := fetchRepository(username, repository)
@@ -94,13 +173,22 @@ func main() {
 }
 
 func init() {
-    var showVersionInfo bool
-    flag.BoolVarP(&showVersionInfo, "version", "V", false, "Print version info and quit.")
+    token := flag.StringP("token", "t", "", "Set the Personal Access Token for API authentication.")
+    flag.BoolVarP(&skipAuth, "no-token", "T", false, "Use the Github API without authentication.")
+    showVersionInfo := flag.BoolP("version", "V", false, "Print version info and quit.")
     flag.Parse()
+    loadConfig()
 
-    if showVersionInfo {
+    if *showVersionInfo {
         fmt.Println("Forkinfo " + version)
         os.Exit(0)
+    }
+    if skipAuth && *token != "" {
+        abort("Cannot skip authentication while also passing an access token.")
+    } else if *token != "" {
+        config.AccessToken = *token
+    } else if skipAuth {
+        fmt.Println("Running without authentication.")
     }
 }
 
