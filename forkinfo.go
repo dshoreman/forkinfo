@@ -200,7 +200,7 @@ func abort(msg string) {
 }
 
 func abortOnError(err error) {
-    if (err != nil) {
+    if err != nil {
         fmt.Printf("[ERROR] %v\n", err)
         os.Exit(1)
     }
