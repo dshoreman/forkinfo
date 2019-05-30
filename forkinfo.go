@@ -3,9 +3,7 @@ package main
 import (
     "bufio"
     "context"
-    "encoding/json"
     "fmt"
-    "io/ioutil"
     "net/http"
     "time"
     "os"
@@ -17,51 +15,15 @@ import (
     "golang.org/x/oauth2"
 )
 
-const configFile = "config.json"
-const configPath = ".config/forkinfo"
 const version = "0.1.0"
-
-type Config struct {
-    AccessToken string `json:"access_token"`
-}
 
 var (
     authClient *http.Client
     client *github.Client
-    config Config
     ctx = context.Background()
     saveConfig bool
     skipAuth bool
 )
-
-func configFullPath() string {
-    return strings.Join([] string {
-        os.Getenv("HOME"),
-        configPath,
-        configFile,
-    }, "/")
-}
-
-func loadConfig() {
-    if data, err := ioutil.ReadFile(configFullPath()); err == nil {
-        json.Unmarshal(data, &config)
-    } else if !os.IsNotExist(err) {
-        abortOnError(err)
-    }
-}
-
-func writeConfig() {
-    fmt.Println("Saving config to ", configFullPath(), "...")
-    configString, _ := json.MarshalIndent(config, "", "  ")
-
-    os.MkdirAll(strings.Join([] string {os.Getenv("HOME"), configPath}, "/"), 0700)
-
-    if err := ioutil.WriteFile(configFullPath(), append(configString, '\n'), 0644); err != nil {
-        fmt.Println("Failed saving config")
-        fmt.Println(err)
-    }
-    loadConfig()
-}
 
 func setupAPI() {
     if saveConfig {
