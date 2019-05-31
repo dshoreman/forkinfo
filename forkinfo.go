@@ -116,6 +116,7 @@ func main() {
 
     fmt.Printf("Listing forks of %s...\n\n", *repo.FullName)
     forks := fetchRepositoryForks(repo)
+    numBad := 0
     numDupes := 0
     numForks := len(forks)
 
@@ -124,11 +125,31 @@ func main() {
             numDupes++
             continue
         }
+
+        base := "master"
+        head := fmt.Sprintf("%s:master", *fork.Owner.Login)
+        comp, _, err := client.Repositories.CompareCommits(ctx, username, *repo.Name, base, head)
+        if err != nil {
+            numBad++
+            continue
+        }
+        if comp.GetStatus() == "identical" {
+            numDupes++
+            continue
+        }
+
         fmt.Printf("%s %s\n", rowNum(i+1, numForks), *fork.FullName)
+        fmt.Printf(
+            "Status: %s (%d commits - %d ahead, %d behind)\n",
+            comp.GetStatus(),
+            comp.GetTotalCommits(),
+            comp.GetAheadBy(),
+            comp.GetBehindBy(),
+        )
         printRepoStats(fork, "short")
     }
 
-    fmt.Printf("Fork listing complete with %d mirror(s) hidden.\n", numDupes)
+    fmt.Printf("Fork listing complete with %d mirror(s) hidden and %d with errors.\n", numDupes, numBad)
 }
 
 func init() {
