@@ -116,15 +116,19 @@ func main() {
 
     fmt.Printf("Listing forks of %s...\n\n", *repo.FullName)
     forks := fetchRepositoryForks(repo)
+    numDupes := 0
     numForks := len(forks)
 
     for i, fork := range forks {
         if fork.PushedAt.Equal(*repo.PushedAt) {
+            numDupes++
             continue
         }
         fmt.Printf("%s %s\n", rowNum(i+1, numForks), *fork.FullName)
         printRepoStats(fork, "short")
     }
+
+    fmt.Printf("Fork listing complete with %d mirror(s) hidden.\n", numDupes)
 }
 
 func init() {
