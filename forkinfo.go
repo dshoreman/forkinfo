@@ -125,6 +125,12 @@ func main() {
 }
 
 func init() {
+    flag.Usage = func() {
+        fmt.Fprintf(os.Stderr, "Usage: %s [options] <user>/<repository>\n", os.Args[0])
+        fmt.Fprintf(os.Stderr, "\nOptions:\n\n")
+        flag.PrintDefaults()
+    }
+
     token := flag.StringP("token", "t", "", "Set the Personal Access Token for API authentication.")
     flag.BoolVarP(&skipAuth, "no-token", "T", false, "Use the Github API without authentication.")
     showVersionInfo := flag.BoolP("version", "V", false, "Print version info and quit.")
@@ -159,9 +165,8 @@ func validate(token string) {
 }
 
 func abort(msg string) {
-    fmt.Println("[ERROR] " + msg)
-    fmt.Println()
-    fmt.Println("Usage: " + os.Args[0] + " <user>/<repository>")
+    fmt.Printf("[ERROR] %s\n\n", msg)
+    flag.Usage()
     os.Exit(1)
 }
 
