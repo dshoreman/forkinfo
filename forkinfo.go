@@ -119,6 +119,9 @@ func main() {
     numForks := len(forks)
 
     for i, fork := range forks {
+        if fork.PushedAt.Equal(*repo.PushedAt) {
+            continue
+        }
         fmt.Printf("%s %s\n", rowNum(i+1, numForks), *fork.FullName)
         printRepoStats(fork, "short")
     }
