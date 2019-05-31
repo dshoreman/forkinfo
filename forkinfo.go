@@ -95,16 +95,6 @@ func rowNum(row, total int) string {
 }
 
 func main() {
-    if len(flag.Args()) == 0 {
-        abort("Not enough arguments supplied.")
-    }
-    if len(flag.Args()) > 1 {
-        abort("Too many arguments supplied.")
-    }
-    if ! strings.Contains(flag.Arg(0), "/") {
-        abort("Argument is not a valid user/repo string.")
-    }
-
     args := strings.Split(flag.Arg(0), "/")
     username, repository := args[0], args[1]
 
@@ -145,12 +135,26 @@ func init() {
         fmt.Println("Forkinfo " + version)
         os.Exit(0)
     }
-    if skipAuth && *token != "" {
-        abort("Cannot skip authentication while also passing an access token.")
-    } else if *token != "" {
+    validate(*token)
+    if *token != "" {
         config.AccessToken = *token
     } else if skipAuth {
         fmt.Println("Running without authentication.")
+    }
+}
+
+func validate(token string) {
+    if skipAuth && token != "" {
+        abort("Cannot skip authentication while also passing an access token.")
+    }
+    if len(flag.Args()) == 0 {
+        abort("Not enough arguments supplied.")
+    }
+    if len(flag.Args()) > 1 {
+        abort("Too many arguments supplied.")
+    }
+    if ! strings.Contains(flag.Arg(0), "/") {
+        abort("Argument is not a valid user/repo string.")
     }
 }
 
