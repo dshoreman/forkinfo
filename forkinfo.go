@@ -21,6 +21,8 @@ var (
     authClient *http.Client
     client *github.Client
     ctx = context.Background()
+    hideDupes bool
+    hideOld bool
     saveConfig bool
     skipAuth bool
 )
@@ -124,7 +126,9 @@ func main() {
     for i, fork := range forks {
         if fork.PushedAt.Equal(*repo.PushedAt) {
             numDupes++
-            continue
+            if hideDupes {
+                continue
+            }
         }
 
         base := "master"
@@ -136,11 +140,15 @@ func main() {
         }
         if comp.GetStatus() == "identical" {
             numDupes++
-            continue
+            if hideDupes {
+                continue
+            }
         }
         if comp.GetStatus() == "behind" {
             numOld++
-            continue
+            if hideOld {
+                continue
+            }
         }
 
         fmt.Printf("%s %s\n", rowNum(i+1, numForks), *fork.FullName)
@@ -154,7 +162,9 @@ func main() {
         printRepoStats(fork, "short")
     }
 
-    fmt.Printf("Fork listing complete. Hidden %d mirrors, %d outdated and %d broken forks.\n", numDupes, numOld, numBad)
+    fmt.Println("Fork listing complete.")
+    fmt.Printf("Of the %d forks found, there were:\n  %d unchanged mirrors\n", numForks, numDupes)
+    fmt.Printf("  %d outdated mirrors\n  %d broken forks\n", numOld, numBad)
 }
 
 func init() {
@@ -164,6 +174,8 @@ func init() {
         flag.PrintDefaults()
     }
 
+    flag.BoolVar(&hideDupes, "hide-same", false, "Hide unchanged mirrors")
+    flag.BoolVar(&hideOld, "hide-old", false, "Hide outdated mirrors")
     token := flag.StringP("token", "t", "", "Set the Personal Access Token for API authentication.")
     flag.BoolVarP(&skipAuth, "no-token", "T", false, "Use the Github API without authentication.")
     showVersionInfo := flag.BoolP("version", "V", false, "Print version info and quit.")
