@@ -24,6 +24,7 @@ var (
     hideDupes bool
     hideOld bool
     saveConfig bool
+    showCommits bool
     skipAuth bool
 )
 
@@ -68,6 +69,20 @@ func fetchRepositoryForks(repo *github.Repository) (forks []*github.Repository) 
     forks, _, err := client.Repositories.ListForks(ctx, *repo.Owner.Login, *repo.Name, &opts)
     abortOnError(err)
     return
+}
+
+func listDifferingCommits(cmp *github.CommitsComparison) {
+    for _, commit := range cmp.Commits {
+        c := commit.GetCommit()
+        fmt.Printf(
+            "%s\tAuthored by %s at %s\n%s\n\n",
+            commit.GetSHA()[:8],
+            c.GetAuthor().GetName(),
+            c.GetAuthor().GetDate().Format("15:04 on _2 Jan 2006"),
+            c.GetMessage(),
+        )
+    }
+    fmt.Printf("Diff: %s\n", cmp.GetHTMLURL())
 }
 
 func printRepoStats(repo *github.Repository, format string) {
@@ -160,6 +175,11 @@ func main() {
             comp.GetBehindBy(),
         )
         printRepoStats(fork, "short")
+
+        if showCommits && comp.GetStatus() == "diverged" {
+            listDifferingCommits(comp)
+        }
+        fmt.Println("------------------------------------------------------------------------")
     }
 
     fmt.Println("Fork listing complete.")
@@ -176,6 +196,7 @@ func init() {
 
     flag.BoolVar(&hideDupes, "hide-same", false, "Hide unchanged mirrors")
     flag.BoolVar(&hideOld, "hide-old", false, "Hide outdated mirrors")
+    flag.BoolVar(&showCommits, "show-commits", false, "Show commits for non-mirror forks")
     token := flag.StringP("token", "t", "", "Set the Personal Access Token for API authentication.")
     flag.BoolVarP(&skipAuth, "no-token", "T", false, "Use the Github API without authentication.")
     showVersionInfo := flag.BoolP("version", "V", false, "Print version info and quit.")
