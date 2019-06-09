@@ -21,6 +21,8 @@ var (
     authClient *http.Client
     client *github.Client
     ctx = context.Background()
+    hideDupes bool
+    hideOld bool
     saveConfig bool
     skipAuth bool
 )
@@ -116,12 +118,53 @@ func main() {
 
     fmt.Printf("Listing forks of %s...\n\n", *repo.FullName)
     forks := fetchRepositoryForks(repo)
+    numBad := 0
+    numOld := 0
+    numDupes := 0
     numForks := len(forks)
 
     for i, fork := range forks {
+        if fork.PushedAt.Equal(*repo.PushedAt) {
+            numDupes++
+            if hideDupes {
+                continue
+            }
+        }
+
+        base := "master"
+        head := fmt.Sprintf("%s:master", *fork.Owner.Login)
+        comp, _, err := client.Repositories.CompareCommits(ctx, username, *repo.Name, base, head)
+        if err != nil {
+            numBad++
+            continue
+        }
+        if comp.GetStatus() == "identical" {
+            numDupes++
+            if hideDupes {
+                continue
+            }
+        }
+        if comp.GetStatus() == "behind" {
+            numOld++
+            if hideOld {
+                continue
+            }
+        }
+
         fmt.Printf("%s %s\n", rowNum(i+1, numForks), *fork.FullName)
+        fmt.Printf(
+            "Status: %s (%d commits - %d ahead, %d behind)\n",
+            comp.GetStatus(),
+            comp.GetTotalCommits(),
+            comp.GetAheadBy(),
+            comp.GetBehindBy(),
+        )
         printRepoStats(fork, "short")
     }
+
+    fmt.Println("Fork listing complete.")
+    fmt.Printf("Of the %d forks found, there were:\n  %d unchanged mirrors\n", numForks, numDupes)
+    fmt.Printf("  %d outdated mirrors\n  %d broken forks\n", numOld, numBad)
 }
 
 func init() {
@@ -131,6 +174,8 @@ func init() {
         flag.PrintDefaults()
     }
 
+    flag.BoolVar(&hideDupes, "hide-same", false, "Hide unchanged mirrors")
+    flag.BoolVar(&hideOld, "hide-old", false, "Hide outdated mirrors")
     token := flag.StringP("token", "t", "", "Set the Personal Access Token for API authentication.")
     flag.BoolVarP(&skipAuth, "no-token", "T", false, "Use the Github API without authentication.")
     showVersionInfo := flag.BoolP("version", "V", false, "Print version info and quit.")
