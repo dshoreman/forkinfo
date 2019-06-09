@@ -117,6 +117,7 @@ func main() {
     fmt.Printf("Listing forks of %s...\n\n", *repo.FullName)
     forks := fetchRepositoryForks(repo)
     numBad := 0
+    numOld := 0
     numDupes := 0
     numForks := len(forks)
 
@@ -137,6 +138,10 @@ func main() {
             numDupes++
             continue
         }
+        if comp.GetStatus() == "behind" {
+            numOld++
+            continue
+        }
 
         fmt.Printf("%s %s\n", rowNum(i+1, numForks), *fork.FullName)
         fmt.Printf(
@@ -149,7 +154,7 @@ func main() {
         printRepoStats(fork, "short")
     }
 
-    fmt.Printf("Fork listing complete with %d mirror(s) hidden and %d with errors.\n", numDupes, numBad)
+    fmt.Printf("Fork listing complete. Hidden %d mirrors, %d outdated and %d broken forks.\n", numDupes, numOld, numBad)
 }
 
 func init() {
