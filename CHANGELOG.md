@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.2.1] - 2019-06-18
+### Fixed
+* Changelog diff links were pointing to Nextshot
+
+
 ## [0.2.0] - 2019-06-18
 ### Added
 * Support for API authentication
@@ -24,6 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Listing of repository's forks
 
 
-[Unreleased]: https://github.com/dshoreman/nextshot/compare/v0.2.0...develop
-[0.2.0]: https://github.com/dshoreman/nextshot/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/dshoreman/nextshot/releases/tag/v0.1.0
+[Unreleased]: https://github.com/dshoreman/forkinfo/compare/v0.2.0...develop
+[0.2.0]: https://github.com/dshoreman/forkinfo/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/dshoreman/forkinfo/releases/tag/v0.1.0
