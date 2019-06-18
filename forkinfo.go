@@ -176,7 +176,7 @@ func main() {
         )
         printRepoStats(fork, "short")
 
-        if showCommits && comp.GetStatus() == "diverged" {
+        if showCommits && (comp.GetStatus() == "diverged" || comp.GetStatus() == "ahead") {
             listDifferingCommits(comp)
         }
         fmt.Println("------------------------------------------------------------------------")
