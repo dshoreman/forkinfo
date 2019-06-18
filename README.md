@@ -11,6 +11,13 @@ Forkinfo aims to fix that by providing basic information about all forks with on
 go get github.com/dshoreman/forkinfo
 ```
 
+Alternatively, the binary can be installed manually:
+```
+git clone -b master https://github.com/dshoreman/forkinfo.git
+make
+sudo make install
+```
+
 ### Development
 
 To build Forkinfo without installing globally, clone this repo and run `go build` in the project directory.
